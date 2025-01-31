@@ -1,0 +1,5 @@
+Information: 14 - Now listening on: https://localhost:7184
+Information: 14 - Now listening on: http://localhost:5230
+Information: 0 - Application started. Press Ctrl+C to shut down.
+Information: 0 - Hosting environment: Development
+Information: 0 - Content root path: /Users/alanrolim/Documents/backend/ApiCatalogo
