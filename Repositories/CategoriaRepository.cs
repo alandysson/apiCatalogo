@@ -12,7 +12,12 @@ public class CategoriaRepository: ICategoriaRepository
     {
         _context = context;
     }
-    
+
+    public IEnumerable<Categoria> GetCategoriasProdutos()
+    {
+        return _context.Categorias.Include(p => p.Produtos).AsNoTracking().ToList();
+    }
+
     public IEnumerable<Categoria> GetCategorias()
     {
         return _context.Categorias.ToList();
