@@ -2,6 +2,7 @@ using ApiCatalogo.Context;
 using ApiCatalogo.Filters;
 using ApiCatalogo.Models;
 using ApiCatalogo.Repositories;
+using APICatalogo.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,7 +36,7 @@ namespace ApiCatalogo.Controllers
         {
             try
             {
-                var categorias = _repository.GetCategorias();
+                var categorias = _repository.GetAll();
                 return Ok(categorias);
             }
             catch (Exception e)
@@ -48,7 +49,7 @@ namespace ApiCatalogo.Controllers
         [HttpGet("{id:int:min(1)}", Name = "ObterCategoria")]
         public ActionResult<Categoria> Get(int id)
         {
-            var categoria = _repository.GetCategoria(id);
+            var categoria = _repository.Get(c => c.CategoriaId == id);
             if (categoria is null)
             {
                 return NotFound("Categoria não encontrada");
@@ -65,7 +66,7 @@ namespace ApiCatalogo.Controllers
             }
 
             var categoriaCriada = _repository.Create(categoria);
-            return new CreatedAtRouteResult("ObterCategoria", new { categoriaCriada.CategoriaId }, categoriaCriada);
+            return new CreatedAtRouteResult("ObterCategoria", new { id = categoriaCriada.CategoriaId }, categoriaCriada);
         }
 
         [HttpPut("{id:int:min(1)}")]
@@ -83,13 +84,13 @@ namespace ApiCatalogo.Controllers
         [HttpDelete("{id:int:min(1)}")]
         public ActionResult Delete(int id)
         {
-            var categoria = _repository.GetCategoria(id);
+            var categoria = _repository.Get(c => c.CategoriaId == id);
             if (categoria is null)
             {
                 return NotFound("Categoria não encontrada");
             }
             
-            var categoriaExcluida = _repository.Delete(id);
+            var categoriaExcluida = _repository.Delete(categoria);
             return Ok(categoriaExcluida);
         }
     }

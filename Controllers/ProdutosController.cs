@@ -1,5 +1,7 @@
 using ApiCatalogo.Context;
 using ApiCatalogo.Models;
+using ApiCatalogo.Repositories;
+using APICatalogo.Repositories;
 using ApiCatalogo.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,22 +12,22 @@ namespace ApiCatalogo.Controllers
     [ApiController]
     public class ProdutosController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IRepository<Produto> _repository;
 
-        public ProdutosController(AppDbContext context)
+        public ProdutosController(IRepository<Produto> repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Produto>>> Get()
+        public ActionResult<IEnumerable<Produto>> Get()
         {
-            var produtos = await _context.Produtos.AsNoTracking().ToListAsync();
+            var produtos =  _repository.GetAll();
             if (produtos.Count() == 0)
             {
                 return NotFound("Produtos não encontrados");
             }
-            return produtos;
+            return Ok(produtos);
         }
 
         [HttpGet("saudacao/{nome}")] // testando o service
@@ -35,9 +37,9 @@ namespace ApiCatalogo.Controllers
         } 
         
         [HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
-        public async Task<ActionResult<Produto>> Get(int id)
+        public ActionResult<Produto> Get(int id)
         {
-            var produto = await _context.Produtos.FirstOrDefaultAsync(p => p.ProdutoId == id);
+            var produto = _repository.Get(p => p.ProdutoId == id);
             if (produto is null)
             {
                 return NotFound("Produto não encontrado");
@@ -53,9 +55,8 @@ namespace ApiCatalogo.Controllers
             {
                 return BadRequest();
             }
-            _context.Produtos.Add(produto);
-            _context.SaveChanges();
-            return new CreatedAtRouteResult("ObterProduto", new { id = produto.ProdutoId }, produto);
+            var produtoCriado = _repository.Create(produto);
+            return new CreatedAtRouteResult("ObterProduto", new { id = produtoCriado.ProdutoId }, produtoCriado);
         }
 
         [HttpPut("{id:int:min(1)}")]
@@ -65,8 +66,7 @@ namespace ApiCatalogo.Controllers
             {
                 return BadRequest();
             }
-            _context.Entry(produto).State = EntityState.Modified;
-            _context.SaveChanges();
+            _repository.Update(produto);
 
             return Ok(produto);
         }
@@ -74,13 +74,12 @@ namespace ApiCatalogo.Controllers
         [HttpDelete("{id:int:min(1)}")]
         public ActionResult Delete(int id)
         {
-            var produto = _context.Produtos.FirstOrDefault(p => p.ProdutoId == id);
+            var produto = _repository.Get(p => p.ProdutoId == id);
             if (produto is null)
             {
-                return NotFound();
-            }
-            _context.Produtos.Remove(produto);
-            _context.SaveChanges();
+                return NotFound("Produto não encontrado!");
+            }            
+            _repository.Delete(produto);
 
             return Ok(produto);
         }
