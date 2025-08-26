@@ -1,4 +1,6 @@
 using ApiCatalogo.Context;
+using ApiCatalogo.DTOs;
+using ApiCatalogo.DTOs.Mappings;
 using ApiCatalogo.Filters;
 using ApiCatalogo.Models;
 using ApiCatalogo.Repositories;
@@ -32,12 +34,19 @@ namespace ApiCatalogo.Controllers
         
         [ServiceFilter(typeof(ApiLoggingFilter))]
         [HttpGet]
-        public ActionResult<IEnumerable<Categoria>> Get()
+        public ActionResult<IEnumerable<CategoriaDTO>> Get()
         {
             try
             {
                 var categorias = _unitOfWork.CategoriaRepository.GetAll();
-                return Ok(categorias);
+
+                if (categorias is null)
+                {
+                    return NotFound("Não existem categorias");
+                }
+                
+                var categoriasDto = categorias.ToCategoriasDTOList();
+                return Ok(categoriasDto);
             }
             catch (Exception e)
             {
@@ -47,43 +56,50 @@ namespace ApiCatalogo.Controllers
         }
 
         [HttpGet("{id:int:min(1)}", Name = "ObterCategoria")]
-        public ActionResult<Categoria> Get(int id)
+        public ActionResult<CategoriaDTO> Get(int id)
         {
             var categoria = _unitOfWork.CategoriaRepository.Get(c => c.CategoriaId == id);
             if (categoria is null)
             {
                 return NotFound("Categoria não encontrada");
             }
-            return categoria;
+
+            var categoriaDto = categoria.ToCategoriaDTO();
+            return Ok(categoriaDto);
         }
 
         [HttpPost]
-        public ActionResult Post(Categoria categoria)
+        public ActionResult<CategoriaDTO> Post(CategoriaDTO categoriaDto)
         {
-            if (categoria is null)
+            if (categoriaDto is null)
             {
                 return BadRequest();
             }
 
+            var categoria = categoriaDto.ToCategoria();
             var categoriaCriada = _unitOfWork.CategoriaRepository.Create(categoria);
             _unitOfWork.Commit();
-            return new CreatedAtRouteResult("ObterCategoria", new { id = categoriaCriada.CategoriaId }, categoriaCriada);
+
+            var novaCategoriaDto = categoriaCriada.ToCategoriaDTO();
+            return new CreatedAtRouteResult("ObterCategoria", new { id = categoriaCriada.CategoriaId }, novaCategoriaDto);
         }
 
         [HttpPut("{id:int:min(1)}")]
-        public ActionResult Put(int id, Categoria categoria)
+        public ActionResult<CategoriaDTO> Put(int id, CategoriaDTO categoriaDto)
         {
-            if (id != categoria.CategoriaId)
+            if (id != categoriaDto.CategoriaId)
             {
                 return BadRequest("Dados inválidos");
             }
-
+            var categoria = categoriaDto.ToCategoria();
             _unitOfWork.CategoriaRepository.Update(categoria);
             _unitOfWork.Commit();
-            return Ok(categoria);
+            
+            var categoriaAtualizadaDto = categoria.ToCategoriaDTO();
+            return Ok(categoriaAtualizadaDto);
         }
         [HttpDelete("{id:int:min(1)}")]
-        public ActionResult Delete(int id)
+        public ActionResult<CategoriaDTO> Delete(int id)
         {
             var categoria = _unitOfWork.CategoriaRepository.Get(c => c.CategoriaId == id);
             if (categoria is null)
@@ -93,7 +109,9 @@ namespace ApiCatalogo.Controllers
             
             _unitOfWork.CategoriaRepository.Delete(categoria);
             _unitOfWork.Commit();
-            return Ok(categoria);
+            
+            var categoriaExcluidaDto = categoria.ToCategoriaDTO();
+            return Ok(categoriaExcluidaDto);
         }
     }
 }
