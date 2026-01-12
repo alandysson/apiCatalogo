@@ -1,4 +1,6 @@
 using ApiCatalogo.Context;
+using ApiCatalogo.DTOs;
+using ApiCatalogo.DTOs.Mappings;
 using ApiCatalogo.Models;
 using ApiCatalogo.Repositories;
 using APICatalogo.Repositories;
@@ -20,14 +22,16 @@ namespace ApiCatalogo.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Produto>> Get()
+        public ActionResult<IEnumerable<ProdutoDTO>> Get()
         {
             var produtos =  _unitOfWork.ProdutoRepository.GetAll();
             if (produtos.Count() == 0)
             {
                 return NotFound("Produtos não encontrados");
             }
-            return Ok(produtos);
+
+            var produtosDto = produtos.ToProdutosDtoList();
+            return Ok(produtosDto);
         }
 
         [HttpGet("saudacao/{nome}")] // testando o service
@@ -37,7 +41,7 @@ namespace ApiCatalogo.Controllers
         } 
         
         [HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
-        public ActionResult<Produto> Get(int id)
+        public ActionResult<ProdutoDTO> Get(int id)
         {
             var produto = _unitOfWork.ProdutoRepository.Get(p => p.ProdutoId == id);
             if (produto is null)
@@ -45,35 +49,40 @@ namespace ApiCatalogo.Controllers
                 return NotFound("Produto não encontrado");
             }
 
-            return produto;
+            var produtoDto = produto.ToProdutoDTO();
+            return Ok(produtoDto);
         }
 
         [HttpPost]
-        public ActionResult Post(Produto produto)
+        public ActionResult Post(ProdutoDTO produtoDto)
         {
-            if (produto is null)
+            if (produtoDto is null)
             {
                 return BadRequest();
             }
-            
+
+            var produto = produtoDto.ToProduto();
             var produtoCriado = _unitOfWork.ProdutoRepository.Create(produto);
             _unitOfWork.Commit();
             
-            return new CreatedAtRouteResult("ObterProduto", new { id = produtoCriado.ProdutoId }, produtoCriado);
+            var novoProduto = produtoCriado.ToProdutoDTO();
+            return new CreatedAtRouteResult("ObterProduto", new { id = produtoCriado.ProdutoId }, novoProduto);
         }
 
         [HttpPut("{id:int:min(1)}")]
-        public ActionResult Put(int id, Produto produto)
+        public ActionResult Put(int id, ProdutoDTO produtoDto)
         {
-            if (id != produto.ProdutoId)
+            if (id != produtoDto.ProdutoId)
             {
                 return BadRequest();
             }
-            
+
+            var produto = produtoDto.ToProduto();
             _unitOfWork.ProdutoRepository.Update(produto);
             _unitOfWork.Commit();
             
-            return Ok(produto);
+            var produtoAtualizado = produto.ToProdutoDTO();
+            return Ok(produtoAtualizado);
         }
 
         [HttpDelete("{id:int:min(1)}")]
@@ -88,7 +97,8 @@ namespace ApiCatalogo.Controllers
             _unitOfWork.ProdutoRepository.Delete(produto);
             _unitOfWork.Commit();
             
-            return Ok(produto);
+            var produtoRemovido = produto.ToProdutoDTO();
+            return Ok(produtoRemovido);
         }
     }
 }
