@@ -21,4 +21,24 @@
     <Folder Include="Log\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Models\Pagination\**" />
+    <Compile Remove="Pagination\QueryStringParameters\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="Models\Pagination\**" />
+    <EmbeddedResource Remove="Pagination\QueryStringParameters\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Models\Pagination\**" />
+    <Content Remove="Pagination\QueryStringParameters\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Models\Pagination\**" />
+    <None Remove="Pagination\QueryStringParameters\**" />
+  </ItemGroup>
+
 </Project>

@@ -1,62 +1,42 @@
 using ApiCatalogo.Context;
 using ApiCatalogo.Models;
+using APICatalogo.Pagination;
+using APICatalogo.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApiCatalogo.Repositories;
 
-public class CategoriaRepository: ICategoriaRepository
+public class CategoriaRepository : Repository<Categoria>, ICategoriaRepository
 {
-    private readonly AppDbContext _context;
-
-    public CategoriaRepository(AppDbContext context)
-    {
-        _context = context;
+    public CategoriaRepository(AppDbContext context) : base(context)
+    {        
     }
     
-    public IEnumerable<Categoria> GetCategorias()
+    public async Task<PagedList<Categoria>> GetCategoriasAsync(CategoriasParameters categoriasParameters)
     {
-        return _context.Categorias.ToList();
-    }
-
-    public Categoria GetCategoria(int id)
-    {
-        return _context.Categorias.FirstOrDefault(c => c.CategoriaId == id);
-    }
-
-    public Categoria Create(Categoria categoria)
-    {
-        if (categoria is null)
-        {
-            throw new ArgumentNullException(nameof(categoria));
-        }
-        _context.Categorias.Add(categoria);
-        _context.SaveChanges();
+        var categorias = await GetAllAsync();
+        var categoriasOrdenadas = categorias.OrderBy(c => c.CategoriaId).AsQueryable();
         
-        return categoria;
+        var categoriasResponse = PagedList<Categoria>.ToPagedList(categoriasOrdenadas, 
+            categoriasParameters.PageNumber, categoriasParameters.PageSize);
+        
+        return categoriasResponse;
     }
 
-    public Categoria Update(Categoria categoria)
+    public async Task<PagedList<Categoria>> GetCategoriasFiltroNomeAsync(CategoriasFiltroNome categoriasParams)
     {
-        if (categoria is null)
+        var categorias = await GetAllAsync();
+        if (!string.IsNullOrEmpty(categoriasParams.Nome))
         {
-            throw new ArgumentNullException(nameof(categoria));
+            categorias = categorias.Where(c => c.Nome.Contains(categoriasParams.Nome, StringComparison.OrdinalIgnoreCase));
         }
-        _context.Entry(categoria).State = EntityState.Modified;
-        _context.SaveChanges();
-        
-        return categoria;
+    
+        var categoriasFiltradas = PagedList<Categoria>.ToPagedList(categorias.AsQueryable(), categoriasParams.PageNumber, categoriasParams.PageSize);
+    
+        return categoriasFiltradas;
     }
-
-    public Categoria Delete(int id)
+    public async Task<IEnumerable<Categoria>> GetCategoriasProdutosAsync()
     {
-        var categoria = _context.Categorias.Find(id);
-        if (categoria is null)
-        {
-            throw new ArgumentNullException(nameof(categoria));
-        }
-        _context.Categorias.Remove(categoria);
-        _context.SaveChanges();
-        
-        return categoria;
-    }
+        return await _context.Categorias.Include(p => p.Produtos).AsNoTracking().ToListAsync();
+    }   
 }

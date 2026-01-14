@@ -1,8 +1,14 @@
 using ApiCatalogo.Context;
+using ApiCatalogo.DTOs;
+using ApiCatalogo.DTOs.Mappings;
 using ApiCatalogo.Models;
+using APICatalogo.Pagination;
+using ApiCatalogo.Repositories;
+using APICatalogo.Repositories;
 using ApiCatalogo.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace ApiCatalogo.Controllers
 {
@@ -10,24 +16,59 @@ namespace ApiCatalogo.Controllers
     [ApiController]
     public class ProdutosController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public ProdutosController(AppDbContext context)
+        public ProdutosController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Produto>>> Get()
+        public async Task<ActionResult<IEnumerable<ProdutoDTO>>> Get()
         {
-            var produtos = await _context.Produtos.AsNoTracking().ToListAsync();
+            var produtos =  await _unitOfWork.ProdutoRepository.GetAllAsync();
             if (produtos.Count() == 0)
             {
                 return NotFound("Produtos não encontrados");
             }
-            return produtos;
+
+            var produtosDto = produtos.ToProdutosDtoList();
+            return Ok(produtosDto);
+        }
+        // Métodos
+        private ActionResult<IEnumerable<ProdutoDTO>> ObterProdutos(PagedList<Produto> produtos)
+        {
+            var metadata = new
+            {
+                produtos.TotalCount,
+                produtos.PageSize,
+                produtos.CurrentPage,
+                produtos.TotalPages,
+                produtos.HasNext,
+                produtos.HasPrevious
+            };
+
+            Response.Headers.Append("X-Pagination", JsonConvert.SerializeObject(metadata));
+            var produtosDto = produtos.ToProdutosDtoList();
+            return Ok(produtosDto);
         }
 
+        [HttpGet("pagination")]
+        public async Task<ActionResult<IEnumerable<ProdutoDTO>>> Get([FromQuery] ProdutosParameters produtosParameters)
+        {
+            var produtos = await _unitOfWork.ProdutoRepository.GetProdutosAsync(produtosParameters);
+
+            return ObterProdutos(produtos);
+        }
+        
+        [HttpGet("filter/preco/pagination")]
+        public async Task<ActionResult<IEnumerable<ProdutoDTO>>> GetProdutosFilterPreco([FromQuery] ProdutosFiltroPreco
+            produtosFilterParameters)
+        {
+            var produtos = await _unitOfWork.ProdutoRepository.GetProdutosFiltroPrecoAsync(produtosFilterParameters);
+            return ObterProdutos(produtos);
+        }
+        
         [HttpGet("saudacao/{nome}")] // testando o service
         public ActionResult<string> GetSaudacaoService(IMeuServico meuServico, string nome)
         {
@@ -35,54 +76,64 @@ namespace ApiCatalogo.Controllers
         } 
         
         [HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
-        public async Task<ActionResult<Produto>> Get(int id)
+        public async Task<ActionResult<ProdutoDTO>> Get(int id)
         {
-            var produto = await _context.Produtos.FirstOrDefaultAsync(p => p.ProdutoId == id);
+            var produto = await _unitOfWork.ProdutoRepository.GetAsync(p => p.ProdutoId == id);
             if (produto is null)
             {
                 return NotFound("Produto não encontrado");
             }
 
-            return produto;
+            var produtoDto = produto.ToProdutoDTO();
+            return Ok(produtoDto);
         }
 
         [HttpPost]
-        public ActionResult Post(Produto produto)
+        public async Task<ActionResult> Post(ProdutoDTO produtoDto)
         {
-            if (produto is null)
+            if (produtoDto is null)
             {
                 return BadRequest();
             }
-            _context.Produtos.Add(produto);
-            _context.SaveChanges();
-            return new CreatedAtRouteResult("ObterProduto", new { id = produto.ProdutoId }, produto);
+
+            var produto = produtoDto.ToProduto();
+            var produtoCriado = _unitOfWork.ProdutoRepository.Create(produto);
+            await _unitOfWork.CommitAsync();
+            
+            var novoProduto = produtoCriado.ToProdutoDTO();
+            return new CreatedAtRouteResult("ObterProduto", new { id = produtoCriado.ProdutoId }, novoProduto);
         }
 
         [HttpPut("{id:int:min(1)}")]
-        public ActionResult Put(int id, Produto produto)
+        public async Task<ActionResult> Put(int id, ProdutoDTO produtoDto)
         {
-            if (id != produto.ProdutoId)
+            if (id != produtoDto.ProdutoId)
             {
                 return BadRequest();
             }
-            _context.Entry(produto).State = EntityState.Modified;
-            _context.SaveChanges();
 
-            return Ok(produto);
+            var produto = produtoDto.ToProduto();
+            _unitOfWork.ProdutoRepository.Update(produto);
+            await _unitOfWork.CommitAsync();
+            
+            var produtoAtualizado = produto.ToProdutoDTO();
+            return Ok(produtoAtualizado);
         }
 
         [HttpDelete("{id:int:min(1)}")]
-        public ActionResult Delete(int id)
+        public async Task<ActionResult> Delete(int id)
         {
-            var produto = _context.Produtos.FirstOrDefault(p => p.ProdutoId == id);
+            var produto = await _unitOfWork.ProdutoRepository.GetAsync(p => p.ProdutoId == id);
             if (produto is null)
             {
-                return NotFound();
-            }
-            _context.Produtos.Remove(produto);
-            _context.SaveChanges();
-
-            return Ok(produto);
+                return NotFound("Produto não encontrado!");
+            }            
+            
+            _unitOfWork.ProdutoRepository.Delete(produto);
+            await _unitOfWork.CommitAsync();
+            
+            var produtoRemovido = produto.ToProdutoDTO();
+            return Ok(produtoRemovido);
         }
     }
 }

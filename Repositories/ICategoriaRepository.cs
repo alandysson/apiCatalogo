@@ -1,12 +1,12 @@
 using ApiCatalogo.Models;
+using APICatalogo.Pagination;
+using APICatalogo.Repositories;
 
 namespace ApiCatalogo.Repositories;
 
-public interface ICategoriaRepository
+public interface ICategoriaRepository: IRepository<Categoria>
 {
-    IEnumerable<Categoria> GetCategorias();
-    Categoria GetCategoria(int id);
-    Categoria Create(Categoria categoria);
-    Categoria Update(Categoria categoria);
-    Categoria Delete(int id);
+    Task<PagedList<Categoria>> GetCategoriasAsync(CategoriasParameters categoriasParameters);
+    Task<PagedList<Categoria>> GetCategoriasFiltroNomeAsync(CategoriasFiltroNome categoriasParameters);
+    Task<IEnumerable<Categoria>> GetCategoriasProdutosAsync();
 }

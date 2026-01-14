@@ -3,6 +3,8 @@ using ApiCatalogo.Context;
 using ApiCatalogo.Extensions;
 using ApiCatalogo.Filters;
 using ApiCatalogo.Logging;
+using ApiCatalogo.Repositories;
+using APICatalogo.Repositories;
 using ApiCatalogo.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,10 +23,14 @@ string mySqlConnection = builder.Configuration.GetConnectionString("DefaultConne
 builder.Services.AddDbContext<AppDbContext>(options => 
         options.UseMySql(mySqlConnection, ServerVersion.AutoDetect(mySqlConnection))
     );
+
 builder.Services.AddScoped<ApiLoggingFilter>();
+builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
+builder.Services.AddScoped<IProdutoRepository, ProdutoRepository>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddTransient<IMeuServico, MeuServico>();
-
 builder.Logging.AddProvider(new CustomLoggerProvider(new CustomLoggerProviderConfiguration()));
 
 var app = builder.Build();
