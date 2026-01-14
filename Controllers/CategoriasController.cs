@@ -3,10 +3,12 @@ using ApiCatalogo.DTOs;
 using ApiCatalogo.DTOs.Mappings;
 using ApiCatalogo.Filters;
 using ApiCatalogo.Models;
+using APICatalogo.Pagination;
 using ApiCatalogo.Repositories;
 using APICatalogo.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace ApiCatalogo.Controllers
 {
@@ -31,7 +33,24 @@ namespace ApiCatalogo.Controllers
             
             return Ok(categoriasProdutos);
         }
-        
+        private ActionResult<IEnumerable<ProdutoDTO>> ObterCategorias(PagedList<Categoria> categorias)
+        {
+            var metadata = new
+            {
+                categorias.TotalCount,
+                categorias.PageSize,
+                categorias.CurrentPage,
+                categorias.TotalPages,
+                categorias.HasNext,
+                categorias.HasPrevious
+            };
+
+            Response.Headers.Append("X-Pagination", JsonConvert.SerializeObject(metadata));
+            var categoriasDto = categorias.ToCategoriasDTOList();
+            
+            return Ok(categoriasDto);
+        }
+
         [ServiceFilter(typeof(ApiLoggingFilter))]
         [HttpGet]
         public ActionResult<IEnumerable<CategoriaDTO>> Get()
@@ -54,7 +73,25 @@ namespace ApiCatalogo.Controllers
             }
 
         }
+        [HttpGet("pagination")]
+        public ActionResult<IEnumerable<ProdutoDTO>> Get([FromQuery] CategoriasParameters categoriasParameters)
+        {
+            var categorias = _unitOfWork.CategoriaRepository.GetCategorias(categoriasParameters);
 
+            return ObterCategorias(categorias);
+        }
+
+
+        [HttpGet("filter/nome/pagination")]
+        public ActionResult<IEnumerable<ProdutoDTO>> GetCategoriasFiltroNome(
+            [FromQuery] CategoriasFiltroNome categoriasParams)
+        {
+            var categorias = _unitOfWork.CategoriaRepository.GetCategoriasFiltroNome(categoriasParams);
+
+            return ObterCategorias(categorias);
+        }
+
+        
         [HttpGet("{id:int:min(1)}", Name = "ObterCategoria")]
         public ActionResult<CategoriaDTO> Get(int id)
         {

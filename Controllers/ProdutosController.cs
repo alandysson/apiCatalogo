@@ -2,11 +2,13 @@ using ApiCatalogo.Context;
 using ApiCatalogo.DTOs;
 using ApiCatalogo.DTOs.Mappings;
 using ApiCatalogo.Models;
+using APICatalogo.Pagination;
 using ApiCatalogo.Repositories;
 using APICatalogo.Repositories;
 using ApiCatalogo.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace ApiCatalogo.Controllers
 {
@@ -33,7 +35,40 @@ namespace ApiCatalogo.Controllers
             var produtosDto = produtos.ToProdutosDtoList();
             return Ok(produtosDto);
         }
+        // Métodos
+        private ActionResult<IEnumerable<ProdutoDTO>> ObterProdutos(PagedList<Produto> produtos)
+        {
+            var metadata = new
+            {
+                produtos.TotalCount,
+                produtos.PageSize,
+                produtos.CurrentPage,
+                produtos.TotalPages,
+                produtos.HasNext,
+                produtos.HasPrevious
+            };
 
+            Response.Headers.Append("X-Pagination", JsonConvert.SerializeObject(metadata));
+            var produtosDto = produtos.ToProdutosDtoList();
+            return Ok(produtosDto);
+        }
+
+        [HttpGet("pagination")]
+        public ActionResult<IEnumerable<ProdutoDTO>> Get([FromQuery] ProdutosParameters produtosParameters)
+        {
+            var produtos = _unitOfWork.ProdutoRepository.GetProdutos(produtosParameters);
+
+            return ObterProdutos(produtos);
+        }
+        
+        [HttpGet("filter/preco/pagination")]
+        public ActionResult<IEnumerable<ProdutoDTO>> GetProdutosFilterPreco([FromQuery] ProdutosFiltroPreco
+            produtosFilterParameters)
+        {
+            var produtos = _unitOfWork.ProdutoRepository.GetProdutosFiltroPreco(produtosFilterParameters);
+            return ObterProdutos(produtos);
+        }
+        
         [HttpGet("saudacao/{nome}")] // testando o service
         public ActionResult<string> GetSaudacaoService(IMeuServico meuServico, string nome)
         {
