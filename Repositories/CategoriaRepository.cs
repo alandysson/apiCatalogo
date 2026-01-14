@@ -12,30 +12,31 @@ public class CategoriaRepository : Repository<Categoria>, ICategoriaRepository
     {        
     }
     
-    public PagedList<Categoria> GetCategorias(CategoriasParameters categoriasParameters)
+    public async Task<PagedList<Categoria>> GetCategoriasAsync(CategoriasParameters categoriasParameters)
     {
-        var categorias = GetAll().OrderBy(c => c.CategoriaId).AsQueryable();
+        var categorias = await GetAllAsync();
+        var categoriasOrdenadas = categorias.OrderBy(c => c.CategoriaId).AsQueryable();
         
-        var categoriasOrdenados = PagedList<Categoria>.ToPagedList(categorias, 
+        var categoriasResponse = PagedList<Categoria>.ToPagedList(categoriasOrdenadas, 
             categoriasParameters.PageNumber, categoriasParameters.PageSize);
         
-        return categoriasOrdenados;
+        return categoriasResponse;
     }
 
-    public PagedList<Categoria> GetCategoriasFiltroNome(CategoriasFiltroNome categoriasParams)
+    public async Task<PagedList<Categoria>> GetCategoriasFiltroNomeAsync(CategoriasFiltroNome categoriasParams)
     {
-        var categorias = GetAll().AsQueryable();
+        var categorias = await GetAllAsync();
         if (!string.IsNullOrEmpty(categoriasParams.Nome))
         {
             categorias = categorias.Where(c => c.Nome.Contains(categoriasParams.Nome, StringComparison.OrdinalIgnoreCase));
         }
     
-        var categoriasFiltradas = PagedList<Categoria>.ToPagedList(categorias, categoriasParams.PageNumber, categoriasParams.PageSize);
+        var categoriasFiltradas = PagedList<Categoria>.ToPagedList(categorias.AsQueryable(), categoriasParams.PageNumber, categoriasParams.PageSize);
     
         return categoriasFiltradas;
     }
-    public IEnumerable<Categoria> GetCategoriasProdutos()
+    public async Task<IEnumerable<Categoria>> GetCategoriasProdutosAsync()
     {
-        return _context.Categorias.Include(p => p.Produtos).AsNoTracking().ToList();
+        return await _context.Categorias.Include(p => p.Produtos).AsNoTracking().ToListAsync();
     }   
 }
