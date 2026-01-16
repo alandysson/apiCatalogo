@@ -6,6 +6,7 @@ using ApiCatalogo.Models;
 using APICatalogo.Pagination;
 using ApiCatalogo.Repositories;
 using APICatalogo.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -83,6 +84,7 @@ namespace ApiCatalogo.Controllers
 
 
         [HttpGet("filter/nome/pagination")]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<ProdutoDTO>>> GetCategoriasFiltroNome(
             [FromQuery] CategoriasFiltroNome categoriasParams)
         {
